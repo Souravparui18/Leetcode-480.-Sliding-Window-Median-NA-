@@ -1,0 +1,105 @@
+import java.util.*;
+
+class Solution {
+
+    private PriorityQueue<Integer> maxHeap =
+            new PriorityQueue<>((a, b) -> Integer.compare(b, a)); // safe comparator
+
+    private PriorityQueue<Integer> minHeap =
+            new PriorityQueue<>(); // natural order
+
+    private Map<Integer, Integer> delayed = new HashMap<>();
+
+    private int k;
+    private int leftSize = 0;   // valid elements in maxHeap
+    private int rightSize = 0;  // valid elements in minHeap
+
+    public double[] medianSlidingWindow(int[] nums, int k) {
+        this.k = k;
+        int n = nums.length;
+        double[] result = new double[n - k + 1];
+
+        // initialize first window
+        for (int i = 0; i < k; i++) {
+            addNum(nums[i]);
+        }
+
+        result[0] = getMedian();
+
+        for (int i = k; i < n; i++) {
+            addNum(nums[i]);
+            removeNum(nums[i - k]);
+            result[i - k + 1] = getMedian();
+        }
+
+        return result;
+    }
+
+    private void addNum(int num) {
+        if (maxHeap.isEmpty() || num <= maxHeap.peek()) {
+            maxHeap.offer(num);
+            leftSize++;
+        } else {
+            minHeap.offer(num);
+            rightSize++;
+        }
+        balance();
+    }
+
+    private void removeNum(int num) {
+        delayed.put(num, delayed.getOrDefault(num, 0) + 1);
+
+        if (num <= maxHeap.peek()) {
+            leftSize--;
+            if (num == maxHeap.peek()) {
+                prune(maxHeap);
+            }
+        } else {
+            rightSize--;
+            if (num == minHeap.peek()) {
+                prune(minHeap);
+            }
+        }
+
+        balance();
+    }
+
+    private void balance() {
+        // left heap can have at most 1 more element than right
+        if (leftSize > rightSize + 1) {
+            minHeap.offer(maxHeap.poll());
+            leftSize--;
+            rightSize++;
+            prune(maxHeap);
+        } 
+        else if (leftSize < rightSize) {
+            maxHeap.offer(minHeap.poll());
+            leftSize++;
+            rightSize--;
+            prune(minHeap);
+        }
+    }
+
+    private void prune(PriorityQueue<Integer> heap) {
+        while (!heap.isEmpty()) {
+            int num = heap.peek();
+            if (delayed.containsKey(num)) {
+                delayed.put(num, delayed.get(num) - 1);
+                if (delayed.get(num) == 0) {
+                    delayed.remove(num);
+                }
+                heap.poll();
+            } else {
+                break;
+            }
+        }
+    }
+
+    private double getMedian() {
+        if (k % 2 == 1) {
+            return (double) maxHeap.peek();
+        } else {
+            return ((double) maxHeap.peek() + (double) minHeap.peek()) / 2.0;
+        }
+    }
+}
